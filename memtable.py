@@ -22,7 +22,7 @@ class Memtable:
     if value:
       self.bytes -= len(value)
     else:
-      self.byets += len(k)
+      self.bytes += len(k)
     self.tree.insert(k, TOMBSTONE)
 
   def entries(self):
