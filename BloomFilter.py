@@ -24,3 +24,9 @@ class BloomFilter:
             if self.bit_array[hashed_index] == 0:
                 out = False
         return out
+
+    def add(self, item):
+        return self.__add__(item)
+
+    def exists(self, item):
+        return self.__contains__(item)
