@@ -18,12 +18,12 @@ class Node:
     self.right = right
 
   def uncle(self):
-    p = self.grandparent()
-    if p:
-      if p.left and p.left.key == self.parent.key:
-        return p.right
+    g = self.grandparent()
+    if g:
+      if g.left and g.left == self.parent:
+        return g.right
       else:
-        return p.left
+        return g.left
     return None
 
   def grandparent(self):
