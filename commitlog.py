@@ -29,5 +29,6 @@ class CommitLog:
         self.fd.flush()
 
     def purge(self):
+        self.fd.close()
         self.fd = open(self.log_path, 'w')
 
