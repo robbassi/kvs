@@ -64,23 +64,23 @@ class RBTree:
     def insert_r(self, root, k, v):
         if k == root.key:
             root.value = v
+            return None
         elif k < root.key:
             if root.left:
                 return self.insert_r(root.left, k, v)
-            else:
-                node = Node(RED, k, v, root, None, None)
-                root.left = node
-                self.insert_repair(node)
-                return node
+
+            node = Node(RED, k, v, root, None, None)
+            root.left = node
+            self.insert_repair(node)
+            return node
         else:
             if root.right:
                 return self.insert_r(root.right, k, v)
-            else:
-                node = Node(RED, k, v, root, None, None)
-                root.right = node
-                self.insert_repair(node)
-                return node
-        return None
+            
+            node = Node(RED, k, v, root, None, None)
+            root.right = node
+            self.insert_repair(node)
+            return node
 
     def insert_repair(self, node):
         if not node.parent:
