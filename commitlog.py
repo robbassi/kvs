@@ -6,9 +6,9 @@ class CommitLog:
         self.fd = None
         self.log_path = log_path
         self.recovered_memtable = None
-        self.resume()
+        self.__resume()
      
-    def resume(self):
+    def __resume(self):
         # recover the memtable if necessary
         if path.exists(self.log_path):
             memtable = Memtable()
