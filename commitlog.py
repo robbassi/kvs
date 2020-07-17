@@ -16,7 +16,10 @@ class CommitLog:
             record = self.fd.readline()
             while record:
                 key, value = record.rstrip().split(',')
-                memtable.set(key, value)
+                if value:
+                    memtable.set(key, value)
+                else:
+                    memtable.unset(key)
                 record = self.fd.readline()
             # check if it has any data
             if memtable.approximate_bytes() > 0:
@@ -24,8 +27,12 @@ class CommitLog:
         else:
             self.fd = open(self.log_path, 'w')
 
-    def record(self, k, v):
+    def record_set(self, k, v):
         self.fd.write(f"{k},{v}\n")
+        self.fd.flush()
+
+    def record_unset(self, k):
+        self.fd.write(f"{k},\n")
         self.fd.flush()
 
     def purge(self):
