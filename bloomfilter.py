@@ -12,21 +12,15 @@ class BloomFilter:
         self.hash_count = hash_count
         self.size = size
 
-    def __add__(self, item):
+    def add(self, item):
         for i in range(self.hash_count):
             hashed_index = mmh3.hash(item, i) % self.size
             self.bit_array[hashed_index] = 1
 
-    def __contains__(self, item):
+    def exists(self, item):
         out = True
         for i in range(self.hash_count):
             hashed_index = mmh3.hash(item, i) % self.size
             if self.bit_array[hashed_index] == 0:
                 out = False
         return out
-
-    def add(self, item):
-        return self.__add__(item)
-
-    def exists(self, item):
-        return self.__contains__(item)
