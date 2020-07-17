@@ -1,4 +1,4 @@
-from os import path, remove
+from os import path
 from memtable import Memtable
 
 class CommitLog:
