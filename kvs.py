@@ -5,19 +5,21 @@ from readerwriterlock import rwlock
 
 class KVS:
     def __init__(self):
-        # come up with size and hash_count with bloom filter
-        self.bloomfilter = BloomFilter(10, 5)
+        self.bloomfilter = BloomFilter(size=10, hash_count=3)
         self.memtable = Memtable()
         self.rwl = rwlock.RWLockFairD()
 
     def set(self, k, v):
         with self.rwl.gen_wlock():
+            self.bloomfilter.add(v)
             self.memtable.set(k, v)
 
     def get(self, k):
         with self.rwl.gen_rlock():
-            self.memtable.get(k)
+            if self.bloomfilter.exists(k):
+                self.memtable.get(k)
 
     def unset(self, k):
         with self.rwl.gen_wlock():
-            self.memtable.unset(k)
+            if self.bloomfilter.exists(k):
+                self.memtable.unset(k)
