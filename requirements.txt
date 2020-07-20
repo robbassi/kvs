@@ -1,2 +1,3 @@
 bitarray==1.3.0
 mmh3==2.5.1
+readerwriterlock==1.0.7
