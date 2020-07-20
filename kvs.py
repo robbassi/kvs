@@ -17,7 +17,7 @@ class KVS:
     def get(self, k):
         with self.rwl.gen_rlock():
             if self.bloomfilter.exists(k):
-                self.memtable.get(k)
+                return self.memtable.get(k)
 
     def unset(self, k):
         with self.rwl.gen_wlock():
