@@ -4,10 +4,10 @@ from os import path
 from memtable import TOMBSTONE
 
 
-class Segment:
+class SSTable:
 
-    def __init__(self, segment_path):
-        self.path = segment_path
+    def __init__(self, sstable_path):
+        self.path = sstable_path
         self.fd = None
 
     def write(self, memtable):
@@ -21,8 +21,8 @@ class Segment:
 
     def search(self, search_key):
         if path.exists(self.path):
-            with self.open('r') as segment:
-                for line in segment.fd:
+            with self.open('r') as sstable:
+                for line in sstable.fd:
                     (key, value) = line.rstrip().split(',')
                     if key == search_key:
                         if value:
