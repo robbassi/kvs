@@ -6,7 +6,7 @@ class CommitLog:
         self.fd = fd
 
     @classmethod 
-    def resume(self, log_path):
+    def resume(cls, log_path):
         memtable = Memtable()
         fd = None
         # recover the memtable if necessary
@@ -22,7 +22,7 @@ class CommitLog:
                 record = fd.readline()
         else:
             fd = open(log_path, 'w')
-        return CommitLog(fd), memtable
+        return cls(fd), memtable
 
     def record_set(self, k, v):
         self.fd.write(f"{k},{v}\n")
