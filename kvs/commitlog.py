@@ -1,5 +1,5 @@
 from os import path
-from memtable import Memtable
+from .memtable import Memtable
 
 class CommitLog:
     def __init__(self, fd):
