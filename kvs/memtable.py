@@ -30,8 +30,8 @@ class Memtable:
             self.bytes += len(k)
         self.tree.insert(k, TOMBSTONE)
 
-    def entries(self) -> Iterable[Tuple[str, A]]:
-        yield from ((key, value) for (key, value) in inorder_traversal(self.tree.root))
+    def entries(self) -> Iterable[Tuple[str, MemValue]]:
+        yield from ((key, value) for (key, value) in inorder_traversal(self.tree))
  
     def approximate_bytes(self):
         return self.bytes

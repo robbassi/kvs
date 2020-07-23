@@ -12,14 +12,18 @@ class Color(Enum):
 RED = Color.RED
 BLACK = Color.BLACK
 
-def inorder_traversal(node: Node[A]) -> Iterable[Tuple[str, A]]:
-    if node is None:
-        return
-    if node.left:
-        yield from inorder_traversal(node.left)
-    yield (node.key, node.value)
-    if node.right:
-        yield from inorder_traversal(node.right)
+def inorder_traversal(tree: RBTree[A]) -> Iterable[Tuple[str, A]]:
+    def traverse(node: Node[A]) -> Iterable[Tuple[str, A]]:
+        if node is None:
+            return
+        if node.left:
+            yield from traverse(node.left)
+        yield (node.key, node.value)
+        if node.right:
+            yield from traverse(node.right)
+    if tree.root is None:
+        return tuple()
+    yield from traverse(tree.root)
 
 
 class Node(Generic[A]):
