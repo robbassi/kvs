@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Dict, Generic, Iterable, Optional, TypeVar
+from typing import Generic, Iterable, Optional, Tuple, TypeVar
 
 A = TypeVar("A")
 
@@ -12,18 +12,14 @@ class Color(Enum):
 RED = Color.RED
 BLACK = Color.BLACK
 
-
-def inorder_traversal(tree: RBTree) -> Iterable[Node]:
-    def traverse(node: Node) -> Iterable[Node]:
-        if node.left:
-            yield from traverse(node.left)
-        yield node
-        if node.right:
-            yield from traverse(node.right)
-
-    if tree.root is None:
-        return None
-    yield from traverse(tree.root)
+def inorder_traversal(node: Node[A]) -> Iterable[Tuple[str, A]]:
+    if node is None:
+        return
+    if node.left:
+        yield from inorder_traversal(node.left)
+    yield (node.key, node.value)
+    if node.right:
+        yield from inorder_traversal(node.right)
 
 
 class Node(Generic[A]):
@@ -63,18 +59,6 @@ class Node(Generic[A]):
 class RBTree(Generic[A]):
     def __init__(self):
         self.root = None
-
-    @classmethod
-    def from_dict(cls, kv_dict: Dict[str, A]) -> RBTree[A]:
-        rb_tree = cls()
-        for key, value in kv_dict.items():
-            #TODO: Is this a mypy bug?
-            # error: Value of type variable "Ord" of "insert" of "RBTree" cannot be "object"
-            rb_tree.insert(key, value)
-        return rb_tree
-
-    def to_dict(self) -> Dict[str, A]:
-        return dict((node.key, node.value) for node in inorder_traversal(self))
 
     def search(self, key: str) -> Optional[A]:
         if self.root:
