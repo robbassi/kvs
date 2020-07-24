@@ -22,14 +22,15 @@ class SSTable:
     @classmethod
     def create(cls, path, memtable):
         bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        fd = open(path, 'w')
-        for (key, value) in memtable.entries():
-            if value == TOMBSTONE:
-                fd.write(f"{key},\n")
-            else:
-                fd.write(f"{key},{value}\n")
-            bf.add(key)
-        fd.flush()
+        with open(path, 'w') as fd:
+            for (key, value) in memtable.entries():
+                if value == TOMBSTONE:
+                    fd.write(f"{key},\n")
+                else:
+                    fd.write(f"{key},{value}\n")
+                bf.add(key)
+        # pass readonly copy to constructor
+        fd = open(path, 'r')
         return cls(fd, bf)
 
     def entries(self):
