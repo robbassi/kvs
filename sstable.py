@@ -23,17 +23,18 @@ class SSTable:
     def create(cls, path, memtable):
         bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
         fd = open(path, 'w')
-        with fd:
-            for (key, value) in memtable.entries():
-                if value == TOMBSTONE:
-                    fd.write(f"{key},\n")
-                else:
-                    fd.write(f"{key},{value}\n")
-                bf.add(key)
+        for (key, value) in memtable.entries():
+            if value == TOMBSTONE:
+                fd.write(f"{key},\n")
+            else:
+                fd.write(f"{key},{value}\n")
+            bf.add(key)
+        fd.flush()
         return cls(fd, bf)
 
     def entries(self):
-        yield from (line.rstrip().split(',') for line in open(self.fd.name, 'r'))
+        self.fd.seek(0)
+        yield from (line.rstrip().split(',') for line in self.fd)
 
     def search(self, search_key):
         if not self.bf.exists(search_key):
@@ -42,4 +43,6 @@ class SSTable:
             if key == search_key:
                 if value:
                     return value
+                else:
+                    return TOMBSTONE
         return None
