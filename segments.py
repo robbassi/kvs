@@ -21,7 +21,7 @@ class Segments:
                 match = SEGMENT_PATTERN.search(f.name)
                 if match:
                     index = int(match.group('index'))
-                    segment = SSTable(open(f.path, 'r'))
+                    segment = SSTable(f.path)
                     segment_files.append((index, segment))
         if segment_files:
             segment_files.sort(key=lambda t: t[0], reverse=True)

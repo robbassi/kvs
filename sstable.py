@@ -8,8 +8,8 @@ BF_HASH_COUNT = 5
 class SSTable:
     """Represents a Sorted-String-Table (SSTable) on disk"""
 
-    def __init__(self, fd, bf=None):
-        self.fd = fd
+    def __init__(self, path, bf=None):
+        self.path = path
         self.bf = bf
         if not self.bf:
             self.__sync()
@@ -29,13 +29,11 @@ class SSTable:
                 else:
                     fd.write(f"{key},{value}\n")
                 bf.add(key)
-        # pass readonly copy to constructor
-        fd = open(path, 'r')
-        return cls(fd, bf)
+        return cls(path, bf)
 
     def entries(self):
-        self.fd.seek(0)
-        yield from (line.rstrip().split(',') for line in self.fd)
+        with open(self.path, 'r') as fd:
+            yield from (line.rstrip().split(',') for line in fd)
 
     def search(self, search_key):
         if not self.bf.exists(search_key):
