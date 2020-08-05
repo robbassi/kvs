@@ -2,6 +2,8 @@ BLACK=0
 RED=1
 
 def inorder_traversal(node):
+    if node is None:
+        return
     if node.left:
         yield from inorder_traversal(node.left)
     yield (node.key, node.value)
