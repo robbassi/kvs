@@ -12,9 +12,9 @@ class SSTable:
         self.path = path
         self.bf = bf
         if not self.bf:
-            self.__sync()
+            self._sync()
 
-    def __sync(self):
+    def _sync(self):
         self.bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
         for (key, value) in self.entries():
             self.bf.add(key)

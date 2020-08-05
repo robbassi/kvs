@@ -10,11 +10,11 @@ class Segments:
         self.segment_dir = segment_dir
         self.segments = []
         if path.isdir(self.segment_dir):
-            self.__load_segments()
+            self._load_segments()
         else:
             mkdir(self.segment_dir)
     
-    def __load_segments(self):
+    def _load_segments(self):
         segment_files = []
         with scandir(self.segment_dir) as files:
             for f in files:
