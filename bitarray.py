@@ -1,5 +1,3 @@
-# make an array
-
 class bitarray:
 
     def __init__(self, size):
@@ -32,7 +30,7 @@ class bitarray:
 
 
     def get(self, n):
-        
+
         try:
             return self.arr[n]
         except IndexError:
