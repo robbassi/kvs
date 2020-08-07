@@ -12,6 +12,10 @@ class bitarray:
         else:
             raise Exception("Invalid bit entered, only 1 or 0 are valid inputs.")
 
-    # def set(self, n, bit)
+    def set(self, n, bit):
+        if bit == 0 or bit == 1:
+            self.arr[n] = bit
 
-    # def get(self, n)
+
+    def get(self, n):
+        return self.arr[n]
