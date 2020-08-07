@@ -10,7 +10,7 @@ class bitarray:
             for i in range(len(self.arr)):
                 self.arr[i] = bit
         else:
-            raise Exception("Invalid bit entered, only 1 or 0 are valid inputs.")
+            raise Exception("SetAll: Invalid bit entered, only 1 or 0 are valid inputs.")
 
 
     def set(self, n, bit):
@@ -20,12 +20,12 @@ class bitarray:
             try:
                 self.arr[n] = bit
             except IndexError:
-                raise Exception("The value entered is out of range of the array.")
+                raise Exception("Set: Value entered is out of range of the array.")
             except TypeError:
-                raise Exception("Please enter a value that is an integer")
+                raise Exception("Set: Enter a value that is an integer")
 
         else:
-            raise Exception("Invalid bit entered, only 1 or 0 are valid inputs.")
+            raise Exception("Set: Invalid bit entered, only 1 or 0 are valid inputs.")
 
 
 
@@ -34,6 +34,6 @@ class bitarray:
         try:
             return self.arr[n]
         except IndexError:
-            raise Exception("The value entered is out of range of the array.")
+            raise Exception("Get: Value entered is out of range of the array.")
         except TypeError:
-            raise Exception("The value entered is not an integer, Please enter a value that is an integer")
+            raise Exception("Get: Value entered is not an integer.")
