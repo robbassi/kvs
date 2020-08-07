@@ -19,12 +19,9 @@ jobs:
       with:
         python-version: 3.8
     - name: Install dependecies
-      uses: dschep/install-pipenv-action@v1
-      with: 
-        command: |
+      run: |
+          pip install pipenv
           pipenv sync --dev
     - name: Lint, typecheck, and test
-      uses: dschep/install-pipenv-action@v1
-      with:
-        command: |
-          make test
+      run: |
+        make test
