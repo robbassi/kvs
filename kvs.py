@@ -9,12 +9,12 @@ MT_MAX_SIZE = 1000
 
 
 class KVS:
-    def __init__(self, segments_path):
-        self.__segments_path = segments_path
+    def __init__(self, path):
+        self.__path = path
         self.__rwl = rwlock.RWLockFairD()
         self.__bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
         self.__mt = Memtable()
-        self.__segments = Segments(self.__segments_path)
+        self.__segments = Segments(self.__path)
 
     def set(self, k, v):
         with self.__rwl.gen_wlock():
