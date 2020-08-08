@@ -19,7 +19,7 @@ class KVS:
     def set(self, k, v):
         with self.__rwl.gen_wlock():
             if self.__mt.approximate_bytes() <= MT_MAX_SIZE:
-                self.__bf.add(v)
+                self.__bf.add(k)
                 self.__mt.set(k, v)
             else:
                 self.__segments.flush(self.__mt)
