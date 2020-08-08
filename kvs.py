@@ -22,9 +22,10 @@ class KVS:
                 self.__bf.add(k)
                 self.__mt.set(k, v)
             else:
+                self.__bf.add(k)
+                self.__mt.set(k, v)
                 self.__segments.flush(self.__mt)
                 self.__mt = Memtable()
-                self.__mt.set(k, v)
 
     def get(self, k):
         with self.__rwl.gen_rlock():
