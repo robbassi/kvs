@@ -1,42 +1,38 @@
 from memtable import Memtable
-from bloomfilter import BloomFilter
 from readerwriterlock import rwlock
 from segments import Segments
+from commitlog import CommitLog
 
-BF_SIZE = 10000
 BF_HASH_COUNT = 5
-MT_MAX_SIZE = 1000
+MT_MAX_SIZE = 5000000
 
 
 class KVS:
-    def __init__(self, path):
-        self.__path = path
-        self.__rwl = rwlock.RWLockFairD()
-        self.__bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        self.__mt = Memtable()
-        self.__segments = Segments(self.__path)
-
-    def set(self, k, v):
-        with self.__rwl.gen_wlock():
-            if self.__mt.approximate_bytes() <= MT_MAX_SIZE:
-                self.__bf.add(k)
-                self.__mt.set(k, v)
-            else:
-                self.__bf.add(k)
-                self.__mt.set(k, v)
-                self.__segments.flush(self.__mt)
-                self.__mt = Memtable()
+    def __init__(self, segments_path, log_path):
+        self.rwlock = rwlock.RWLockFairD()
+        self.commitlog, self.memtable = CommitLog(log_path).resume(log_path)
+        self.segments = Segments(segments_path)
 
     def get(self, k):
-        with self.__rwl.gen_rlock():
-            if self.__bf.exists(k):
-                r = self.__mt.get(k)
-                if r is None:
-                    return self.__segments.search(k)
-                else:
-                    return r
+        with self.rwlock.gen_rlock():
+            r = self.memtable.get(k)
+            if r is None:
+                return self.segments.search(k)
+            else:
+                return r
+
+    def set(self, k, v):
+        with self.rwlock.gen_wlock():
+            if self.memtable.approximate_bytes() <= MT_MAX_SIZE:
+                self.commitlog.record_set(k, v)
+                self.memtable.set(k, v)
+            else:
+                self.commitlog.record_set(k, v)
+                self.memtable.set(k, v)
+                self.segments.flush(self.memtable)
+                self.memtable = Memtable()
 
     def unset(self, k):
-        with self.__rwl.gen_wlock():
-            if self.__bf.exists(k):
-                self.__mt.unset(k)
+        with self.rwlock.gen_wlock():
+            self.commitlog.record_unset(k)
+            self.memtable.unset(k)
