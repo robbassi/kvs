@@ -15,6 +15,7 @@ hypothesis = "*"
 [packages]
 bitarray = "*"
 mmh3 = "*"
+readerwriterlock = "*"
 
 [requires]
 python_version = "3.8"
