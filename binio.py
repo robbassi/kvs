@@ -2,33 +2,36 @@ from os import SEEK_CUR
 from contextlib import contextmanager
 from common import TOMBSTONE
 
+KV_ENCODING = 'utf-8'
+KV_BYTEORDER = 'big'
+
 TOMBSTONE_SIZE = -1
-TOMBSTONE_BUFF = int.to_bytes(TOMBSTONE_SIZE, 2, byteorder='big', signed=True)
+TOMBSTONE_BUFF = int.to_bytes(TOMBSTONE_SIZE, 2, KV_BYTEORDER, signed=True)
 
 # primitives
 
 def read_int16(fd):
     buff = fd.read(2)
-    value = int.from_bytes(buff, byteorder='big', signed=True)
+    value = int.from_bytes(buff, KV_BYTEORDER, signed=True)
     return value
 
 def read_uint16(fd):
     buff = fd.read(2)
-    value = int.from_bytes(buff, byteorder='big')
+    value = int.from_bytes(buff, KV_BYTEORDER)
     return value
 
 def write_int16(fd, value):
-    buff = int.to_bytes(value, 2, byteorder='big', signed=True)
+    buff = int.to_bytes(value, 2, KV_BYTEORDER, signed=True)
     fd.write(buff)
 
 def write_uint16(fd, value):
-    buff = int.to_bytes(value, 2, byteorder='big')
+    buff = int.to_bytes(value, 2, KV_BYTEORDER)
     fd.write(buff)
 
 def read_key(fd):
     key_size = read_uint16(fd)
     buff = fd.read(key_size)
-    key = buff.decode('utf-8')
+    key = buff.decode(KV_ENCODING)
     return key
 
 def read_value(fd):
@@ -36,11 +39,11 @@ def read_value(fd):
     if value_size == TOMBSTONE_SIZE:
         return TOMBSTONE
     buff = fd.read(value_size)
-    value = buff.decode('utf-8')
+    value = buff.decode(KV_ENCODING)
     return value
 
 def write_key(fd, key):
-    key_bytes = bytes(key, encoding='utf-8')
+    key_bytes = bytes(key, KV_ENCODING)
     write_uint16(fd, len(key_bytes))
     fd.write(key_bytes)
 
@@ -48,49 +51,11 @@ def write_value(fd, value):
     if value == TOMBSTONE:
         fd.write(TOMBSTONE_BUFF)
     else:
-        value_bytes = bytes(value, encoding='utf-8')
+        value_bytes = bytes(value, KV_ENCODING)
         write_int16(fd, len(value_bytes))
         fd.write(value_bytes)
 
 # high-level interface
-
-@contextmanager
-def kv_writer(path, append=False):
-    writer = None
-    try:
-        writer = KVWriter(path, append)
-        yield writer
-    finally:
-        if writer:
-            writer.flush()
-            writer.close()
-
-class KVReader:
-    def __init__(self, path):
-        self.path = path
-
-    def entries(self):
-        with open(self.path, 'rb') as fd:
-            while fd.peek(1):
-                key = read_key(fd)
-                value = read_value(fd)
-                yield key, value
-
-    def search(self, search_key):
-        with open(self.path, 'rb') as fd:
-            key = read_key(fd)
-            while key:
-                if key == search_key:
-                    return read_value(fd)
-                # quit early if the key is too big
-                elif key > search_key:
-                    return None
-                # jump to the next key
-                value_size = read_int16(fd)
-                if value_size > 0:
-                    fd.seek(value_size, SEEK_CUR)
-                key = read_key(fd)
-        return None
 
 class KVWriter:
     def __init__(self, path, append=False):
@@ -110,3 +75,38 @@ class KVWriter:
     def close(self):
         self.fd.close()
 
+@contextmanager
+def kv_writer(path, append=False):
+    writer = KVWriter(path, append)
+    try:
+        yield writer
+    finally:
+        writer.flush()
+        writer.close()
+
+class KVReader:
+    def __init__(self, path):
+        self.path = path
+
+    def entries(self):
+        with open(self.path, 'rb') as fd:
+            while fd.peek(1):
+                key = read_key(fd)
+                value = read_value(fd)
+                yield key, value
+
+    def search(self, search_key):
+        with open(self.path, 'rb') as fd:
+            key = read_key(fd)
+            while key:
+                if key == search_key:
+                    return read_value(fd)
+                # quit early if the key is too big
+                if key > search_key:
+                    return None
+                # jump to the next key
+                value_size = read_int16(fd)
+                if value_size > 0:
+                    fd.seek(value_size, SEEK_CUR)
+                key = read_key(fd)
+        return None
