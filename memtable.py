@@ -1,9 +1,5 @@
+from common import TOMBSTONE
 from rbtree import RBTree, inorder_traversal
-
-class Tombstone:
-    pass
-
-TOMBSTONE = Tombstone()
 
 class Memtable:
     def __init__(self):
