@@ -21,7 +21,10 @@ class KVReader:
         self.fd.seek(offset, SEEK_CUR)
 
     def has_next(self):
-        return self.fd.peek(1)
+        if self.fd.read(1):
+            self.skip(-1)
+            return True
+        return False
 
     def read_key_size(self):
         key_buff = self.fd.read(KEY_BYTES)
