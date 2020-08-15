@@ -2,13 +2,13 @@ from os import SEEK_SET, SEEK_CUR
 from contextlib import contextmanager
 from common import TOMBSTONE
 
-KV_ENCODING = 'utf-8'
-KV_BYTEORDER = 'big'
-KV_KEY_BYTES = 2
-KV_VALUE_BYTES = 2 
+ENCODING = 'utf-8'
+BYTEORDER = 'big'
+KEY_BYTES = 2
+VALUE_BYTES = 2 
 
 TOMBSTONE_SIZE = -1
-TOMBSTONE_BUFF = TOMBSTONE_SIZE.to_bytes(KV_KEY_BYTES, KV_BYTEORDER, signed=True)
+TOMBSTONE_BUFF = TOMBSTONE_SIZE.to_bytes(KEY_BYTES, BYTEORDER, signed=True)
 
 class KVReader:
     def __init__(self, path):
@@ -24,23 +24,23 @@ class KVReader:
         return self.fd.peek(1)
 
     def read_key_size(self):
-        key_buff = self.fd.read(KV_KEY_BYTES)
-        key_size = int.from_bytes(key_buff, KV_BYTEORDER)
+        key_buff = self.fd.read(KEY_BYTES)
+        key_size = int.from_bytes(key_buff, BYTEORDER)
         return key_size
 
     def read_value_size(self):
-        value_buff = self.fd.read(KV_VALUE_BYTES)
-        value_size = int.from_bytes(value_buff, KV_BYTEORDER, signed=True)
+        value_buff = self.fd.read(VALUE_BYTES)
+        value_size = int.from_bytes(value_buff, BYTEORDER, signed=True)
         return value_size
 
     def read_key_bytes(self, key_size):
         key_buff = self.fd.read(key_size)
-        key_data = key_buff.decode(KV_ENCODING)
+        key_data = key_buff.decode(ENCODING)
         return key_data
 
     def read_value_bytes(self, value_size):
         value_buff = self.fd.read(value_size)
-        value_data = value_buff.decode(KV_ENCODING)
+        value_data = value_buff.decode(ENCODING)
         return value_data
 
     def read_key(self):
@@ -66,8 +66,8 @@ class KVWriter:
         self.fd = open(path, 'ab' if append else 'wb')
 
     def write_key(self, key):
-        key_buff = bytes(key, KV_ENCODING)
-        key_size_buff = int.to_bytes(len(key_buff), KV_KEY_BYTES, KV_BYTEORDER)
+        key_buff = bytes(key, ENCODING)
+        key_size_buff = int.to_bytes(len(key_buff), KEY_BYTES, BYTEORDER)
         self.fd.write(key_size_buff)
         self.fd.write(key_buff)
 
@@ -75,8 +75,8 @@ class KVWriter:
         if value == TOMBSTONE:
             self.fd.write(TOMBSTONE_BUFF)
             return
-        value_buff = bytes(value, KV_ENCODING)
-        value_size_buff = int.to_bytes(len(value_buff), KV_VALUE_BYTES, KV_BYTEORDER, signed=True)
+        value_buff = bytes(value, ENCODING)
+        value_size_buff = int.to_bytes(len(value_buff), VALUE_BYTES, BYTEORDER, signed=True)
         self.fd.write(value_size_buff)
         self.fd.write(value_buff)
 
