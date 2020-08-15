@@ -36,7 +36,7 @@ class Segments:
     def search(self, k):
         for segment in self.segments:
             value = segment.search(k)
-            if value:
+            if value is not None:
                 return value
         return None
 
