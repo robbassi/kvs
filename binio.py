@@ -36,26 +36,21 @@ class KVReader:
         value_size = int.from_bytes(value_buff, BYTEORDER, signed=True)
         return value_size
 
-    def read_key_bytes(self, key_size):
-        key_buff = self.fd.read(key_size)
-        key_data = key_buff.decode(ENCODING)
-        return key_data
-
-    def read_value_bytes(self, value_size):
-        value_buff = self.fd.read(value_size)
-        value_data = value_buff.decode(ENCODING)
-        return value_data
+    def read_bytes(self, size):
+        buff = self.fd.read(size)
+        data = buff.decode(ENCODING)
+        return data
 
     def read_key(self):
         key_size = self.read_key_size()
-        key_data = self.read_key_bytes(key_size)
+        key_data = self.read_bytes(key_size)
         return key_data
 
     def read_value(self):
         value_size = self.read_value_size()
         if value_size == TOMBSTONE_SIZE:
             return TOMBSTONE
-        value_data = self.read_value_bytes(value_size)
+        value_data = self.read_bytes(value_size)
         return value_data
 
     def read_entry(self):
