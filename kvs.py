@@ -22,15 +22,16 @@ class KVS:
             self.commitlog.record_set(k, v)
             self.memtable.set(k, v)
             if self.memtable.approximate_bytes() >= MT_MAX_SIZE:
-                self.segments.flush(self.memtable)
-                self.memtable = Memtable()
-                self.commitlog.purge()
+                self.renew_memtable()
 
     def unset(self, k):
         with self.rwlock.gen_wlock():
             self.commitlog.record_unset(k)
             self.memtable.unset(k)
             if self.memtable.approximate_bytes() >= MT_MAX_SIZE:
-                self.segments.flush(self.memtable)
-                self.memtable = Memtable()
-                self.commitlog.purge()
+                self.renew_memtable()
+
+    def renew_memtable(self):
+        self.segments.flush(self.memtable)
+        self.memtable = Memtable()
+        self.commitlog.purge()
