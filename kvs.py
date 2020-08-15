@@ -26,7 +26,7 @@ class KVS:
                 self.memtable = Memtable()
                 self.commitlog.purge()
 
-def unset(self, k):
-        with self.rwlock.gen_wlock():
-            self.commitlog.record_unset(k)
-            self.memtable.unset(k)
+    def unset(self, k):
+            with self.rwlock.gen_wlock():
+                self.commitlog.record_unset(k)
+                self.memtable.unset(k)
