@@ -1,7 +1,7 @@
 from os import path
 from common import TOMBSTONE
 from memtable import Memtable
-from binio import KVReader, KVWriter
+from binio import kv_iter, KVWriter
 
 class CommitLog:
     def __init__(self, writer):
@@ -13,8 +13,7 @@ class CommitLog:
         writer = None
         # recover the memtable if necessary
         if path.exists(log_path):
-            log = KVReader(log_path)
-            for key, value in log.entries():
+            for key, value in kv_iter(log_path):
                 if value == TOMBSTONE:
                     memtable.unset(key)
                 else:
@@ -25,11 +24,11 @@ class CommitLog:
         return cls(writer), memtable
 
     def record_set(self, k, v):
-        self.writer.write(k, v)
+        self.writer.write_entry(k, v)
         self.writer.flush()
 
     def record_unset(self, k):
-        self.writer.write(k, TOMBSTONE)
+        self.writer.write_entry(k, TOMBSTONE)
         self.writer.flush()
 
     def purge(self):

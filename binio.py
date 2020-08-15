@@ -1,69 +1,88 @@
-from os import SEEK_CUR
+from os import SEEK_SET, SEEK_CUR
 from contextlib import contextmanager
 from common import TOMBSTONE
 
 KV_ENCODING = 'utf-8'
 KV_BYTEORDER = 'big'
+KV_KEY_BYTES = 2
+KV_VALUE_BYTES = 2 
 
 TOMBSTONE_SIZE = -1
-TOMBSTONE_BUFF = int.to_bytes(TOMBSTONE_SIZE, 2, KV_BYTEORDER, signed=True)
+TOMBSTONE_BUFF = TOMBSTONE_SIZE.to_bytes(KV_KEY_BYTES, KV_BYTEORDER, signed=True)
 
-# primitives
+class KVReader:
+    def __init__(self, path):
+        self.fd = open(path, 'rb')
 
-def read_int16(fd):
-    buff = fd.read(2)
-    value = int.from_bytes(buff, KV_BYTEORDER, signed=True)
-    return value
+    def seek(self, offset):
+        self.fd.seek(offset, SEEK_SET)
 
-def read_uint16(fd):
-    buff = fd.read(2)
-    value = int.from_bytes(buff, KV_BYTEORDER)
-    return value
+    def skip(self, offset):
+        self.fd.seek(offset, SEEK_CUR)
 
-def write_int16(fd, value):
-    buff = int.to_bytes(value, 2, KV_BYTEORDER, signed=True)
-    fd.write(buff)
+    def has_next(self):
+        return self.fd.peek(1)
 
-def write_uint16(fd, value):
-    buff = int.to_bytes(value, 2, KV_BYTEORDER)
-    fd.write(buff)
+    def read_key_size(self):
+        key_buff = self.fd.read(KV_KEY_BYTES)
+        key_size = int.from_bytes(key_buff, KV_BYTEORDER)
+        return key_size
 
-def read_key(fd):
-    key_size = read_uint16(fd)
-    buff = fd.read(key_size)
-    key = buff.decode(KV_ENCODING)
-    return key
+    def read_value_size(self):
+        value_buff = self.fd.read(KV_VALUE_BYTES)
+        value_size = int.from_bytes(value_buff, KV_BYTEORDER, signed=True)
+        return value_size
 
-def read_value(fd):
-    value_size = read_int16(fd)
-    if value_size == TOMBSTONE_SIZE:
-        return TOMBSTONE
-    buff = fd.read(value_size)
-    value = buff.decode(KV_ENCODING)
-    return value
+    def read_key_bytes(self, key_size):
+        key_buff = self.fd.read(key_size)
+        key_data = key_buff.decode(KV_ENCODING)
+        return key_data
 
-def write_key(fd, key):
-    key_bytes = bytes(key, KV_ENCODING)
-    write_uint16(fd, len(key_bytes))
-    fd.write(key_bytes)
+    def read_value_bytes(self, value_size):
+        value_buff = self.fd.read(value_size)
+        value_data = value_buff.decode(KV_ENCODING)
+        return value_data
 
-def write_value(fd, value):
-    if value == TOMBSTONE:
-        fd.write(TOMBSTONE_BUFF)
-    else:
-        value_bytes = bytes(value, KV_ENCODING)
-        write_int16(fd, len(value_bytes))
-        fd.write(value_bytes)
+    def read_key(self):
+        key_size = self.read_key_size()
+        key_data = self.read_key_bytes(key_size)
+        return key_data
 
-# high-level interface
+    def read_value(self):
+        value_size = self.read_value_size()
+        if value_size == TOMBSTONE_SIZE:
+            return TOMBSTONE
+        value_data = self.read_value_bytes(value_size)
+        return value_data
+
+    def read_entry(self):
+        return self.read_key(), self.read_value()
+
+    def close(self):
+        self.fd.close()
 
 class KVWriter:
     def __init__(self, path, append=False):
         self.fd = open(path, 'ab' if append else 'wb')
 
-    def write(self, key, value):
-        write_key(self.fd, key)
-        write_value(self.fd, value)
+    def write_key(self, key):
+        key_buff = bytes(key, KV_ENCODING)
+        key_size_buff = int.to_bytes(len(key_buff), KV_KEY_BYTES, KV_BYTEORDER)
+        self.fd.write(key_size_buff)
+        self.fd.write(key_buff)
+
+    def write_value(self, value):
+        if value == TOMBSTONE:
+            self.fd.write(TOMBSTONE_BUFF)
+            return
+        value_buff = bytes(value, KV_ENCODING)
+        value_size_buff = int.to_bytes(len(value_buff), KV_VALUE_BYTES, KV_BYTEORDER, signed=True)
+        self.fd.write(value_size_buff)
+        self.fd.write(value_buff)
+
+    def write_entry(self, key, value):
+        self.write_key(key)
+        self.write_value(value)
 
     def flush(self):
         self.fd.flush()
@@ -76,6 +95,14 @@ class KVWriter:
         self.fd.close()
 
 @contextmanager
+def kv_reader(path):
+    reader = KVReader(path)
+    try:
+        yield reader
+    finally:
+        reader.close()
+
+@contextmanager
 def kv_writer(path, append=False):
     writer = KVWriter(path, append)
     try:
@@ -84,29 +111,7 @@ def kv_writer(path, append=False):
         writer.flush()
         writer.close()
 
-class KVReader:
-    def __init__(self, path):
-        self.path = path
-
-    def entries(self):
-        with open(self.path, 'rb') as fd:
-            while fd.peek(1):
-                key = read_key(fd)
-                value = read_value(fd)
-                yield key, value
-
-    def search(self, search_key):
-        with open(self.path, 'rb') as fd:
-            key = read_key(fd)
-            while key:
-                if key == search_key:
-                    return read_value(fd)
-                # quit early if the key is too big
-                if key > search_key:
-                    return None
-                # jump to the next key
-                value_size = read_int16(fd)
-                if value_size > 0:
-                    fd.seek(value_size, SEEK_CUR)
-                key = read_key(fd)
-        return None
+def kv_iter(path):
+    with kv_reader(path) as r:
+        while r.has_next():
+            yield r.read_entry()
