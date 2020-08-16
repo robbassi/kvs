@@ -16,7 +16,7 @@ class SSTable:
 
     def _sync(self):
         self.bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        for key, _ in kv_iter(self.path):
+        for key, _ in self.entries():
             self.bf.add(key)
 
     @classmethod
@@ -37,7 +37,7 @@ class SSTable:
         with kv_reader(self.path) as r:
             while r.has_next():
                 key = r.read_key()
-                # quit early if the key is too big
+                # stop if the key is too big
                 if key > search_key:
                     return None
                 if key == search_key:

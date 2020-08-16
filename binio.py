@@ -106,7 +106,6 @@ def kv_writer(path, append=False):
     try:
         yield writer
     finally:
-        writer.flush()
         writer.close()
 
 def kv_iter(path):
