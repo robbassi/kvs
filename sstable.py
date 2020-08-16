@@ -16,8 +16,11 @@ class SSTable:
 
     def _sync(self):
         self.bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        for key, _ in self.entries():
-            self.bf.add(key)
+        with kv_reader(self.path) as r:
+            while r.has_next():
+                key = r.read_key()
+                self.bf.add(key)
+                r.skip_value()
 
     @classmethod
     def create(cls, path, memtable):
@@ -42,8 +45,5 @@ class SSTable:
                     return None
                 if key == search_key:
                     return r.read_value()
-                # jump to the next key
-                value_size = r.read_value_size()
-                if value_size > 0:
-                    r.skip(value_size)
+                r.skip_value()
         return None

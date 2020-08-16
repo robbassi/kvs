@@ -14,17 +14,17 @@ class KVReader:
     def __init__(self, path):
         self.fd = open(path, 'rb')
 
-    def seek(self, offset):
-        self.fd.seek(offset, SEEK_SET)
-
-    def skip(self, offset):
-        self.fd.seek(offset, SEEK_CUR)
-
     def has_next(self):
         if self.fd.read(1):
             self.skip(-1)
             return True
         return False
+
+    def seek(self, offset):
+        self.fd.seek(offset, SEEK_SET)
+
+    def skip(self, offset):
+        self.fd.seek(offset, SEEK_CUR)
 
     def read_key_size(self):
         key_buff = self.fd.read(KEY_BYTES)
@@ -40,6 +40,15 @@ class KVReader:
         buff = self.fd.read(size)
         data = buff.decode(ENCODING)
         return data
+
+    def skip_key(self):
+        key_size = self.read_key_size()
+        self.skip(key_size)
+
+    def skip_value(self):
+        value_size = self.read_value_size()
+        if value_size > 0:
+            self.skip(value_size)
 
     def read_key(self):
         key_size = self.read_key_size()
