@@ -18,9 +18,8 @@ class BloomFilter:
             self.bit_array[hashed_index] = 1
 
     def exists(self, item):
-        out = True
         for i in range(self.hash_count):
             hashed_index = mmh3.hash(item, i) % self.size
             if self.bit_array[hashed_index] == 0:
-                out = False
-        return out
+                return False
+        return True
