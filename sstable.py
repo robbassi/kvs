@@ -1,5 +1,5 @@
 from bloomfilter import BloomFilter
-from binio import kv_iter, kv_reader, kv_writer
+from binio import kv_reader, kv_writer
 
 BF_SIZE = 10000
 BF_HASH_COUNT = 5
@@ -30,9 +30,6 @@ class SSTable:
                 writer.write_entry(key, value)
                 bf.add(key)
         return cls(path, bf)
-
-    def entries(self):
-        yield from kv_iter(self.path)
 
     def search(self, search_key):
         if not self.bf.exists(search_key):
