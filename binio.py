@@ -1,4 +1,4 @@
-from os import SEEK_SET, SEEK_CUR
+from os import fsync, SEEK_SET, SEEK_CUR
 from contextlib import contextmanager
 from common import TOMBSTONE
 
@@ -91,8 +91,9 @@ class KVWriter:
         self.write_key(key)
         self.write_value(value)
 
-    def flush(self):
+    def sync(self):
         self.fd.flush()
+        fsync(self.fd.fileno())
 
     def truncate(self):
         self.fd.seek(0)
@@ -115,6 +116,7 @@ def kv_writer(path, append=False):
     try:
         yield writer
     finally:
+        writer.sync()
         writer.close()
 
 def kv_iter(path):

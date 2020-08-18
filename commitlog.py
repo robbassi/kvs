@@ -25,11 +25,11 @@ class CommitLog:
 
     def record_set(self, k, v):
         self.writer.write_entry(k, v)
-        self.writer.flush()
+        self.writer.sync()
 
     def record_unset(self, k):
         self.writer.write_entry(k, TOMBSTONE)
-        self.writer.flush()
+        self.writer.sync()
 
     def purge(self):
         self.writer.truncate()
