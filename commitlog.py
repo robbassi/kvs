@@ -10,7 +10,6 @@ class CommitLog:
     @classmethod 
     def resume(cls, log_path):
         memtable = Memtable()
-        writer = None
         # recover the memtable if necessary
         if path.exists(log_path):
             for key, value in kv_iter(log_path):
