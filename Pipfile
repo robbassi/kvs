@@ -11,8 +11,12 @@ flake8 = "*"
 mypy = "*"
 pytest = "*"
 hypothesis = "*"
+pytest-mock = "*"
 
 [packages]
+requests = "*"
+fastapi = "*"
+uvicorn = "*"
 bitarray = "*"
 mmh3 = "*"
 readerwriterlock = "*"
