@@ -1,17 +1,19 @@
-from memtable import TOMBSTONE
+import os
 import tempfile
-from typing import Dict, List, Union
+from typing import List, Union
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from kvs import KVS
+from memtable import TOMBSTONE
 
-SEGMENTS_PATH = tempfile.mkdtemp()
-_, LOG_PATH = tempfile.mkstemp()
+SEGMENTS_PATH = os.getenv("SEGMENTS_PATH", tempfile.mkdtemp())
+LOG_PATH = os.getenv("LOG_PATH", tempfile.mkstemp()[1])
 app = FastAPI()
 kvs = KVS(SEGMENTS_PATH, LOG_PATH)
+
 
 class Message(BaseModel):
     message: str
@@ -27,6 +29,7 @@ def log() -> List[str]:
     """Get the commit log file contents. For debugging purposes."""
     with open(LOG_PATH, "r") as commit_file:
         return commit_file.readlines()
+
 
 @app.get("/kvs/{key}", responses={404: {"model": Message}})
 async def get_key(key: str) -> Union[str, JSONResponse]:
