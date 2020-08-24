@@ -1,13 +1,14 @@
 import os
 import tempfile
-from typing import List, Union
+from typing import Tuple, List, Union
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from common import TOMBSTONE
+from binio import kv_iter
 from kvs import KVS
-from memtable import TOMBSTONE
 
 SEGMENTS_PATH = os.getenv("SEGMENTS_PATH", tempfile.mkdtemp())
 LOG_PATH = os.getenv("LOG_PATH", tempfile.mkstemp()[1])
@@ -25,10 +26,9 @@ async def healthcheck():
 
 
 @app.get("/log")
-def log() -> List[str]:
+def log() -> List[Tuple[str, str]]:
     """Get the commit log file contents. For debugging purposes."""
-    with open(LOG_PATH, "r") as commit_file:
-        return commit_file.readlines()
+    return list(kv_iter(LOG_PATH))
 
 
 @app.get("/kvs/{key}", responses={404: {"model": Message}})

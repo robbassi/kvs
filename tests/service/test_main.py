@@ -27,12 +27,12 @@ def test_root():
 
 
 def test_log_returns_lines_from_commit_file(mocker):
-    m = mocker.mock_open(read_data="key1,value1\nkey2,value2\n")
-    mocker.patch("service.main.open", m)
+    log_entries = [["key1","value1"], ["key2","value2"]]
+    mocker.patch("service.main.kv_iter", lambda _: log_entries)
 
     response = client.get("/log")
     assert response.status_code == 200
-    assert response.json() == ["key1,value1\n", "key2,value2\n"]
+    assert response.json() == log_entries
 
 
 def test_get_key_that_exists_returns_value(mocker, kvs):

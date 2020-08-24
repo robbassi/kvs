@@ -1,5 +1,5 @@
 from bloomfilter import BloomFilter
-from memtable import TOMBSTONE
+from binio import kv_reader, kv_writer
 
 BF_SIZE = 10000
 BF_HASH_COUNT = 5
@@ -16,32 +16,31 @@ class SSTable:
 
     def _sync(self):
         self.bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        for (key, value) in self.entries():
-            self.bf.add(key)
+        with kv_reader(self.path) as r:
+            while r.has_next():
+                key = r.read_key()
+                self.bf.add(key)
+                r.skip_value()
 
     @classmethod
     def create(cls, path, memtable):
         bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        with open(path, 'w') as fd:
-            for (key, value) in memtable.entries():
-                if value == TOMBSTONE:
-                    fd.write(f"{key},\n")
-                else:
-                    fd.write(f"{key},{value}\n")
+        with kv_writer(path) as writer:
+            for key, value in memtable.entries():
+                writer.write_entry(key, value)
                 bf.add(key)
         return cls(path, bf)
-
-    def entries(self):
-        with open(self.path, 'r') as fd:
-            yield from (line.rstrip().split(',') for line in fd)
 
     def search(self, search_key):
         if not self.bf.exists(search_key):
             return None
-        for (key, value) in self.entries():
-            if key == search_key:
-                if value:
-                    return value
-                else:
-                    return TOMBSTONE
+        with kv_reader(self.path) as r:
+            while r.has_next():
+                key = r.read_key()
+                # stop if the key is too big
+                if key > search_key:
+                    return None
+                if key == search_key:
+                    return r.read_value()
+                r.skip_value()
         return None
