@@ -1,6 +1,6 @@
 import os
 import tempfile
-from typing import List, Union
+from typing import Tuple, List, Union
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -26,7 +26,7 @@ async def healthcheck():
 
 
 @app.get("/log")
-def log() -> List[str]:
+def log() -> List[Tuple[str, str]]:
     """Get the commit log file contents. For debugging purposes."""
     return list(kv_iter(LOG_PATH))
 
