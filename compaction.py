@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from os import scandir
 from segments import SEGMENT_PATTERN
@@ -5,11 +6,11 @@ from segments import SEGMENT_PATTERN
 MIN_THRESHOLD = 4
 MIN_SIZE = 50
 
+@dataclass(frozen=True)
 class File:
-    def __init__(self, path, size, index):
-        self.path = path
-        self.size = size
-        self.index = index
+    path: str
+    size: int
+    index: int
 
 class Bucket:
     def __init__(self):
@@ -20,8 +21,8 @@ class Bucket:
 
     def compute_bounds(self):
         bucket_size = 0
-        for file in self.files:
-            bucket_size += file.size
+        for file_ in self.files:
+            bucket_size += file_.size
         self.avg = round(bucket_size / len(self.files))
         self.min = self.avg - round(self.avg / 2)
         self.max = self.avg + round(self.avg / 2)
@@ -30,19 +31,19 @@ class Bucket:
         self.files.append(file)
         self.compute_bounds()
 
-    def fits(self, file : File) -> bool:
-        return file.size >= self.min and file.size <= self.max
+    def fits(self, file_ : File) -> bool:
+        return file_.size >= self.min and file_.size <= self.max
 
     def size(self) -> int:
         return len(self.files)
 
-    def last(self, n : int) -> List[File]:
-        files = sorted(self.files, key=lambda file: file.index)
+    def oldest(self, n : int) -> List[File]:
+        files = sorted(self.files, key=lambda file_: file_.index)
         return files[:n]
 
 def compute_buckets(path : str) -> List[Bucket]:
     # collect the files
-    all_files = []
+    all_files: List[File] = []
     with scandir(path) as files:
         for file in files:
             match = SEGMENT_PATTERN.search(file.name)
@@ -53,38 +54,40 @@ def compute_buckets(path : str) -> List[Bucket]:
     # bucket the files
     small_bucket = Bucket()
     buckets = [small_bucket]
-    for file in all_files:
-        if file.size <= MIN_SIZE:
-            small_bucket.add(file)
+    for file_ in all_files:
+        if file_.size <= MIN_SIZE:
+            small_bucket.add(file_)
         else:
             file_bucket = None
             for bucket in buckets:
-                if bucket.fits(file):
+                if bucket.fits(file_):
                     file_bucket = bucket
                     break
             if file_bucket is None:
                 new_bucket = Bucket()
-                new_bucket.add(file)
+                new_bucket.add(file_)
                 buckets.append(new_bucket)
             else:
-                file_bucket.add(file)
+                file_bucket.add(file_)
             buckets.sort(key=lambda b: b.avg)
     return buckets
 
 # stub
 def merge(in_files : List[File]) -> File:
     oldest = in_files[0].index
-    for file in in_files:
-        if oldest > file.index:
-            oldest = file.index 
+    for file_ in in_files:
+        if oldest > file_.index:
+            oldest = file_.index 
     return File(f"segment-{oldest}", 1000, oldest)
 
-def compaction_pass(buckets) -> Optional[Tuple[List[File], File]]:
+def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[File], File]]:
     for bucket in buckets:
         if bucket.size() >= MIN_THRESHOLD:
-            old_files = bucket.last(MIN_THRESHOLD)
+            old_files = bucket.oldest(MIN_THRESHOLD)
             new_file = merge(old_files)
             return (old_files, new_file)
+    else:
+        return None
 
 #########
 
