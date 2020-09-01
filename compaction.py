@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from os import scandir
 from segments import SEGMENT_PATTERN
 
-MIN_THRESHOLD = 2
+MIN_THRESHOLD = 4
 MIN_SIZE = 50
 
 class File:
@@ -61,6 +61,7 @@ def compute_buckets(path : str) -> List[Bucket]:
             for bucket in buckets:
                 if bucket.fits(file):
                     file_bucket = bucket
+                    break
             if file_bucket is None:
                 new_bucket = Bucket()
                 new_bucket.add(file)
