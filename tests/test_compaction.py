@@ -1,3 +1,4 @@
+from common import TOMBSTONE
 import os
 from segments import SEGMENT_PATTERN
 from typing import List
@@ -52,7 +53,7 @@ def generate_fixtures() -> None:
         ("handiwork", "2"),
         ("handlebars", "2"),
         ("handoff", "2"),
-        ("handprinted", "2"),
+        ("handprinted", TOMBSTONE),
     ]
     for name, pairs in locals().items():
         with kv_writer(f"{FIXTURES}/{name.replace('_', '-')}.dat") as writer:
@@ -68,7 +69,6 @@ def generate_fixtures() -> None:
         ("handkerchief", "1"),
         ("handlebars", "2"),
         ("handoff", "2"),
-        ("handprinted", "2"),
     ]
     with kv_writer(f"{FIXTURES}/segment-0-compacted-expected.dat") as writer:
         for pair in expected:

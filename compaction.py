@@ -1,5 +1,5 @@
 import sys
-from common import Value
+from common import TOMBSTONE, Value
 from binio import kv_iter, kv_writer
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -114,7 +114,8 @@ def merge(in_files: List[File]) -> File:
                     continue
                 if reader.current_pair[0] == min_reader.current_pair[0]:
                     reader.advance()
-            writer.write_entry(*min_reader.current_pair)
+            if min_reader.current_pair[1] is not TOMBSTONE:
+                writer.write_entry(*min_reader.current_pair)
             min_reader.advance()
     return File(f"{oldest.path.replace('.dat', '')}-compacted.dat", -1, 0)
 
