@@ -101,9 +101,9 @@ def compute_buckets(path: str) -> List[Bucket]:
 
 
 def merge(in_files: List[File]) -> File:
-    oldest = in_files[0]
+    oldest = in_files[0].path.replace('.dat', '')
     readers = [Entries(file) for file in in_files]
-    with kv_writer(f"{oldest.path.replace('.dat', '')}-compacted.dat") as writer:
+    with kv_writer(f"{oldest}-compacted.dat") as writer:
         while any(reader.has_next for reader in readers):
             min_reader = min(
                 readers,
@@ -117,7 +117,7 @@ def merge(in_files: List[File]) -> File:
             if min_reader.current_pair[1] is not TOMBSTONE:
                 writer.write_entry(*min_reader.current_pair)
             min_reader.advance()
-    return File(f"{oldest.path.replace('.dat', '')}-compacted.dat", -1, 0)
+    return File(f"{oldest}-compacted.dat", -1, 0)
 
 
 def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[File], File]]:
