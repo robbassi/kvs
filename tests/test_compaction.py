@@ -13,6 +13,10 @@ FIXTURES = "tests/fixtures/files_precompaction"
 
 @pytest.fixture
 def files_pre_compaction() -> List[File]:
+    # Uncomment for playing around with the fixtures
+    # for file in os.scandir(FIXTURES):
+    #     os.remove(file.path)
+    # generate_fixtures()
     compacted_test_file = f"{FIXTURES}/segment-0-compacted.dat"
     if os.path.exists(compacted_test_file):
         os.remove(compacted_test_file)
