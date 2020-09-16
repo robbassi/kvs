@@ -14,9 +14,10 @@ FIXTURES = "tests/fixtures/files_precompaction"
 @pytest.fixture
 def files_pre_compaction() -> List[File]:
     # Uncomment for playing around with the fixtures
-    # for file in os.scandir(FIXTURES):
-    #     os.remove(file.path)
-    # generate_fixtures()
+    for file in os.scandir(FIXTURES):
+        os.remove(file.path)
+    generate_fixtures()
+
     compacted_test_file = f"{FIXTURES}/segment-0-compacted.dat"
     if os.path.exists(compacted_test_file):
         os.remove(compacted_test_file)
@@ -36,28 +37,21 @@ def test_merge_correctly_merges_files(files_pre_compaction):
 
 def generate_fixtures() -> None:
     segment_0 = [
-        ("handbag", "0"),
-        ("handful", "0"),
-        ("handicap", "0"),
-        ("handkerchief", "0"),
-        ("handlebars", "0"),
-        ("handprinted", "0"),
+        ("A", "1"),
+        ("B", "2"),
+        ("C", "3"),
     ]
     segment_1 = [
-        ("handcuffs", "1"),
-        ("handful", "1"),
-        ("handicap", "1"),
-        ("handiwork", "1"),
-        ("handkerchief", "1"),
-        ("handprinted", "1"),
+        ("A", "2"),
+        ("B", TOMBSTONE),
+        ("C", "6")
     ]
     segment_2 = [
-        ("handful", "2"),
-        ("handicap", "2"),
-        ("handiwork", "2"),
-        ("handlebars", "2"),
-        ("handoff", "2"),
-        ("handprinted", TOMBSTONE),
+        ("A", "4"),
+        ("C", "12")
+    ]
+    segment_3 = [
+        ("A", "8"),
     ]
     for name, pairs in locals().items():
         with kv_writer(f"{FIXTURES}/{name.replace('_', '-')}.dat") as writer:
@@ -65,14 +59,8 @@ def generate_fixtures() -> None:
                 writer.write_entry(*pair)
 
     expected = [
-        ("handbag", "0"),
-        ("handcuffs", "1"),
-        ("handful", "2"),
-        ("handicap", "2"),
-        ("handiwork", "2"),
-        ("handkerchief", "1"),
-        ("handlebars", "2"),
-        ("handoff", "2"),
+        ("A", "8"),
+        ("C", "12")
     ]
     with kv_writer(f"{FIXTURES}/segment-0-compacted-expected.dat") as writer:
         for pair in expected:

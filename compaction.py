@@ -28,6 +28,9 @@ class Entries:
         else:
             self.has_next = True
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(file={self.file}"
+
     def advance(self) -> None:
         if self.has_next:
             try:
@@ -101,22 +104,24 @@ def compute_buckets(path: str) -> List[Bucket]:
 
 
 def merge(in_files: List[File]) -> File:
-    oldest = in_files[0].path.replace('.dat', '')
-    readers = [Entries(file) for file in in_files]
+    oldest = in_files[0].path.replace(".dat", "")
+    readers = list(filter(lambda r: r.has_next, (Entries(file) for file in in_files)))
     with kv_writer(f"{oldest}-compacted.dat") as writer:
-        while any(reader.has_next for reader in readers):
+        while readers:
             min_reader = min(
                 readers,
-                key=lambda r: (r.current_pair[0], sys.maxsize - r.file.index),
+                key=lambda r: (r.current_pair[0], r.file.index * -1),
             )
             for reader in readers:
-                if not reader.has_next or reader is min_reader:
+                if reader is min_reader:
                     continue
                 if reader.current_pair[0] == min_reader.current_pair[0]:
                     reader.advance()
             if min_reader.current_pair[1] is not TOMBSTONE:
                 writer.write_entry(*min_reader.current_pair)
             min_reader.advance()
+            readers = [reader for reader in readers if reader.has_next]
+
     return File(f"{oldest}-compacted.dat", -1, 0)
 
 
