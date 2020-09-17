@@ -1,9 +1,11 @@
 from sstable import SSTable
-from os import scandir, mkdir, path
+from os import scandir, mkdir, path, remove
 from re import compile as compile_re
 
 SEGMENT_TEMPLATE = 'segment-%d.dat'
 SEGMENT_PATTERN = compile_re("segment-(?P<index>\d+)\.dat")
+
+from compaction import compaction_pass, compute_buckets
 
 class Segments:
     def __init__(self, segment_dir):
@@ -13,7 +15,7 @@ class Segments:
             self._load_segments()
         else:
             mkdir(self.segment_dir)
-    
+
     def _load_segments(self):
         segment_files = []
         with scandir(self.segment_dir) as files:
@@ -40,6 +42,10 @@ class Segments:
                 return value
         return None
 
-    def compact(self):
-        pass
-
+    def compaction_pass(self):
+        buckets = compute_buckets(self.segment_dir)
+        files = compaction_pass(buckets)
+        if files is not None:
+            old_files, new_file = files
+            for old_file in old_files:
+                remove(old_file.path)
