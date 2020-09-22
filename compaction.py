@@ -3,8 +3,8 @@ from common import TOMBSTONE, Value
 from binio import kv_iter, kv_writer
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
-from os import scandir
-from segments import SEGMENT_PATTERN
+from os import scandir, stat
+from sstable import SSTable
 
 MIN_THRESHOLD = 4
 MIN_SIZE = 50
@@ -71,16 +71,12 @@ class Bucket:
         return files[:n]
 
 
-def compute_buckets(path: str) -> List[Bucket]:
+def compute_buckets(segments: List[SSTable]) -> List[Bucket]:
     # collect the files
     all_files: List[File] = []
-    with scandir(path) as files:
-        for file in files:
-            match = SEGMENT_PATTERN.search(file.name)
-            if match:
-                index = int(match.group("index"))
-                size = file.stat().st_size
-                all_files.append(File(file.path, size, index))
+    for segment in segments:
+        size = stat(segment.path).st_size
+        all_files.append(File(segment.path, size, segment.index))
     # bucket the files
     small_bucket = Bucket()
     buckets = [small_bucket]
@@ -122,7 +118,7 @@ def merge(in_files: List[File]) -> File:
             min_reader.advance()
             readers = [reader for reader in readers if reader.has_next]
 
-    return File(f"{oldest}-compacted.dat", -1, 0)
+    return File(f"{oldest}-compacted.dat", -1, in_files[0].index)
 
 
 def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[File], File]]:
@@ -131,7 +127,7 @@ def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[File], File]]:
             old_files = bucket.oldest(MIN_THRESHOLD)
             new_file = merge(old_files)
             return (old_files, new_file)
-    return None
+    return ([], None)
 
 
 #########

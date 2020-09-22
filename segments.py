@@ -1,5 +1,5 @@
 from sstable import SSTable
-from os import scandir, mkdir, path, remove
+from os import scandir, mkdir, path, remove, rename
 from re import compile as compile_re
 from bloomfilter import BloomFilter
 from binio import kv_iter
@@ -28,16 +28,21 @@ class Segments:
                 match = SEGMENT_PATTERN.search(f.name)
                 if match:
                     index = int(match.group('index'))
-                    segment = SSTable(f.path)
-                    segment_files.append((index, segment))
+                    segment = SSTable(f.path, index)
+                    segment_files.append(segment)
         if segment_files:
-            segment_files.sort(key=lambda t: t[0], reverse=True)
-            self.segments = [t[1] for t in segment_files]
-
+            self.segments = sorted(
+                segment_files,
+                key=lambda segment: segment.index,
+                reverse=True,
+            )
+   
     def flush(self, memtable):
-        index = len(self.segments) + 1
+        index = 0
+        if len(self.segments):
+            index = self.segments[0].index + 1
         path = f"{self.segment_dir}/{SEGMENT_TEMPLATE % index}"
-        sstable = SSTable.create(path, memtable)
+        sstable = SSTable.create(path, index, memtable)
         self.segments.insert(0, sstable)
 
     def search(self, k):
@@ -47,15 +52,25 @@ class Segments:
                 return value
         return None
 
-    def compaction_pass(self):
-        buckets = compute_buckets(self.segment_dir)
-        files = compaction_pass(buckets)
-        if files is not None:
-            old_files, new_file = files
-            for old_file in old_files:
-                remove(old_file.path)
-                # TODO: remove deleted segments from in memory segments as they are being deleted on disk
-                for k, _ in kv_iter(new_file.path):
-                    new_bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-                    new_bf.add(k)
-            self.segments += [SSTable(new_file.path, new_bf)]
+    def compact(self):
+        buckets = compute_buckets(self.segments)
+        old_files, new_file = compaction_pass(buckets)
+        if new_file:
+            new_segments = []
+            old_indexes = set(f.index for f in old_files)
+            updated = False
+            for segment in self.segments:
+                if not updated and segment.index <= new_file.index:
+                    new_segment = SSTable(new_file.path, new_file.index)
+                    new_segments.append(new_segment)
+                    updated = True
+                if segment.index not in old_indexes:
+                    new_segments.append(segment)
+            self.segments = new_segments
+            # delete files
+            for f in old_files:
+                remove(f.path)
+            # rename new_file
+            new_file_path = new_file.path.replace("-compacted", "")
+            rename(new_file.path, new_file_path)
+

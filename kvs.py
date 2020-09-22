@@ -23,7 +23,6 @@ class KVS:
             self.memtable.set(k, v)
             if self.memtable.approximate_bytes() >= MT_MAX_SIZE:
                 self._flush_memory()
-                self.segments.compaction_pass()
 
     def unset(self, k):
         with self.rwlock.gen_wlock():
