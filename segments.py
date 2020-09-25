@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from os import scandir, mkdir, path, remove, rename
 from re import compile as compile_re
-from threading import RLock, Thread
+from threading import Lock, Thread
 from queue import Queue
 from readerwriterlock import rwlock
 from binio import kv_iter
@@ -42,7 +42,7 @@ class Segments:
             self.queue.join()
 
     def __init__(self, segment_dir):
-        self.compaction_lock = RLock()
+        self.compaction_lock = Lock()
         self.compaction_thread = None
         self.segment_lock = rwlock.RWLockWrite()
         self.segment_dir = segment_dir
@@ -116,9 +116,8 @@ class Segments:
 
     def _compaction_loop(self):
         while self.compaction_thread.get_task():
-            with self.compaction_lock:
-                self.compact()
-                self.compaction_thread.task_done()
+            self.compact()
+            self.compaction_thread.task_done()
         self.compaction_thread.task_done()
 
     def _notify_compaction_thread(self):
