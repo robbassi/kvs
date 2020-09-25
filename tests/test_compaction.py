@@ -6,17 +6,17 @@ from typing import List
 import pytest
 
 from binio import kv_iter, kv_writer
-from compaction import File, merge
+from sstable import SSTable
 
 FIXTURES = "tests/fixtures/files_precompaction"
 
 
 @pytest.fixture
-def files_pre_compaction() -> List[File]:
+def files_pre_compaction() -> List[SSTable]:
     # Uncomment for playing around with the fixtures
-    for file in os.scandir(FIXTURES):
-        os.remove(file.path)
-    generate_fixtures()
+    #for file in os.scandir(FIXTURES):
+    #    os.remove(file.path)
+    #generate_fixtures()
 
     compacted_test_file = f"{FIXTURES}/segment-0-compacted.dat"
     if os.path.exists(compacted_test_file):
@@ -24,13 +24,13 @@ def files_pre_compaction() -> List[File]:
     files = []
     for file_ in os.scandir(f"{FIXTURES}"):
         if match := SEGMENT_PATTERN.search(file_.name):
-            files.append(File(file_.path, -1, int(match.group("index"))))
+            files.append(SSTable(file_.path, int(match.group("index"))))
     return files
 
 
 def test_merge_correctly_merges_files(files_pre_compaction):
     expected = list(kv_iter(f"{FIXTURES}/segment-0-compacted-expected.dat"))
-    merged_file = merge(files_pre_compaction)
+    merged_file = SSTable.merge(files_pre_compaction)
     result = list(kv_iter(merged_file.path))
     assert result == expected
 

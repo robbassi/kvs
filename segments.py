@@ -1,12 +1,13 @@
-import logging
+from dataclasses import dataclass
 from os import scandir, mkdir, path, remove, rename
 from re import compile as compile_re
-from threading import Lock, Thread
+from threading import RLock, Thread
 from queue import Queue
 from readerwriterlock import rwlock
 from binio import kv_iter
 from bloomfilter import BloomFilter
 from sstable import SSTable
+from compaction import compaction_pass, compute_buckets
 
 SEGMENT_TEMPLATE = 'segment-%d.dat'
 SEGMENT_PATTERN = compile_re("segment-(?P<index>\d+)\.dat")
@@ -14,14 +15,36 @@ SEGMENT_PATTERN = compile_re("segment-(?P<index>\d+)\.dat")
 COMPACT_EXIT = 0
 COMPACT_REQUIRED = 1
 
-from compaction import compaction_pass, compute_buckets
 
 class Segments:
+
+    @dataclass
+    class CompactionThread:
+        queue: Queue
+        thread: Thread
+        
+        def notify(self):
+            self.queue.put(COMPACT_REQUIRED)
+
+        def get_task(self):
+            return self.queue.get()
+
+        def task_done(self):
+            self.queue.task_done()
+
+        def start(self):
+            if not self.thread.is_alive():
+                self.thread.start()
+
+        def stop(self):
+            self.queue.put(COMPACT_EXIT)
+            self.thread.join()
+            self.queue.join()
+
     def __init__(self, segment_dir):
-        self.compaction_lock = Lock()
+        self.compaction_lock = RLock()
         self.compaction_thread = None
-        self.compaction_queue = None
-        self.segment_lock = rwlock.RWLockFairD()
+        self.segment_lock = rwlock.RWLockWrite()
         self.segment_dir = segment_dir
         self.segments = []
         if path.isdir(self.segment_dir):
@@ -53,7 +76,7 @@ class Segments:
             path = f"{self.segment_dir}/{SEGMENT_TEMPLATE % index}"
             sstable = SSTable.create(path, index, memtable)
             self.segments.insert(0, sstable)
-            self.compaction_queue.put(COMPACT_REQUIRED)
+            self._notify_compaction_thread()
 
     def search(self, k):
         with self.segment_lock.gen_rlock():
@@ -65,49 +88,52 @@ class Segments:
 
     def compact(self):
         with self.compaction_lock:
-            buckets = compute_buckets(self.segments)
-            old_files, new_file = compaction_pass(buckets)
-            if new_file:
-                new_segments = []
-                old_indexes = set(f.index for f in old_files)
-                updated = False
+            with self.segment_lock.gen_rlock():
+                buckets = compute_buckets(self.segments)
+            old_segments, new_segment = compaction_pass(buckets)
+            if new_segment is None:
+                return
+            # update the in-memory segments list
+            new_segments = []
+            updated = False
+            old_indexes = set(f.index for f in old_segments)
+            with self.segment_lock.gen_wlock():
                 for segment in self.segments:
-                    if not updated and segment.index <= new_file.index:
-                        new_segment = SSTable(new_file.path, new_file.index)
+                    if not updated and segment.index <= new_segment.index:
                         new_segments.append(new_segment)
                         updated = True
                     if segment.index not in old_indexes:
                         new_segments.append(segment)
-                with self.segment_lock.gen_wlock():
-                    self.segments = new_segments
-                # delete files
-                for f in old_files:
-                    remove(f.path)
-                # rename new_file
-                new_file_path = new_file.path.replace("-compacted", "")
-                rename(new_file.path, new_file_path)
+                # delete the old segments from disk
+                for old_segment in old_segments:
+                    remove(old_segment.path)
+                # fix the new segment's path
+                updated_path = new_segment.path.replace("-compacted", "")
+                rename(new_segment.path, updated_path)
+                new_segment.path = updated_path
+                # update the segments
+                self.segments = new_segments
 
     def _compaction_loop(self):
-        while self.compaction_queue.get():
-            logging.info("running compaction from compaction loop")
-            self.compact()
-            self.compaction_queue.task_done()
-        self.compaction_queue.task_done()
+        while self.compaction_thread.get_task():
+            with self.compaction_lock:
+                self.compact()
+                self.compaction_thread.task_done()
+        self.compaction_thread.task_done()
 
-    def start_compaction_daemon(self):
-        with self.compaction_lock:
-            if not self.compaction_queue:
-                self.compaction_queue = Queue()
-                self.compaction_thread = Thread(target=self._compaction_loop, daemon=True)
-                self.compaction_thread.start()
+    def _notify_compaction_thread(self):
+        if self.compaction_thread:
+            self.compaction_thread.notify()
 
-    def stop_compaction_daemon(self, graceful=True):
-        with self.compaction_lock:
-            if self.compaction_queue:
-                if graceful:
-                    self.compaction_queue.put(COMPACT_EXIT)
-                    self.compaction_thread.join()
-                    self.compaction_queue.join()
-                self.compaction_thread = None
-                self.compaction_queue = None
+    def start_compaction_thread(self):
+        if not self.compaction_thread:
+            worker = Thread(target=self._compaction_loop, daemon=True)
+            self.compaction_thread = Segments.CompactionThread(Queue(), worker)
+            self.compaction_thread.start()
+
+    def stop_compaction_thread(self, graceful=True):
+        if self.compaction_thread:
+            if graceful:
+                self.compaction_thread.stop()
+            self.compaction_thread = None
 

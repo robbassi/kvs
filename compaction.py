@@ -1,7 +1,6 @@
 import sys
 from common import TOMBSTONE, Value
 from binio import kv_iter, kv_writer
-from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from os import scandir, stat
 from sstable import SSTable
@@ -10,136 +9,69 @@ MIN_THRESHOLD = 4
 MIN_SIZE = 50
 
 
-@dataclass(frozen=True)
-class File:
-    path: str
-    size: int
-    index: int
-
-
-class Entries:
-    def __init__(self, file: File) -> None:
-        self.file = file
-        self._pairs = kv_iter(file.path)
-        try:
-            self.current_pair: Tuple[str, Value] = next(self._pairs)
-        except StopIteration:
-            self.has_next = False
-        else:
-            self.has_next = True
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(file={self.file}"
-
-    def advance(self) -> None:
-        if self.has_next:
-            try:
-                self.current_pair = next(self._pairs)
-            except StopIteration:
-                self.has_next = False
-        else:
-            raise RuntimeError("Cannot advance to the next entry. No entries left.")
-
-
 class Bucket:
     def __init__(self):
         self.min = 0
         self.max = 0
         self.avg = 0
-        self.files = []
+        self.segments = []
 
     def compute_bounds(self):
         bucket_size = 0
-        for file_ in self.files:
-            bucket_size += file_.size
-        self.avg = round(bucket_size / len(self.files))
+        for segment in self.segments:
+            bucket_size += segment.size
+        self.avg = round(bucket_size / len(self.segments))
         self.min = self.avg - round(self.avg / 2)
         self.max = self.avg + round(self.avg / 2)
 
-    def add(self, file: File):
-        self.files.append(file)
+    def add(self, segment: SSTable):
+        self.segments.append(segment)
         self.compute_bounds()
 
-    def fits(self, file_: File) -> bool:
-        return file_.size >= self.min and file_.size <= self.max
+    def fits(self, segment: SSTable) -> bool:
+        return segment.size >= self.min and segment.size <= self.max
 
     def size(self) -> int:
-        return len(self.files)
+        return len(self.segments)
 
-    def oldest(self, n: int) -> List[File]:
-        files = sorted(self.files, key=lambda file_: file_.index)
-        return files[:n]
-
+    def oldest(self, n: int) -> List[SSTable]:
+        segments = sorted(self.segments, key=lambda segment: segment.index)
+        return segments[:n]
 
 def compute_buckets(segments: List[SSTable]) -> List[Bucket]:
-    # collect the files
-    all_files: List[File] = []
-    for segment in segments:
-        size = stat(segment.path).st_size
-        all_files.append(File(segment.path, size, segment.index))
-    # bucket the files
     small_bucket = Bucket()
     buckets = [small_bucket]
-    for file_ in all_files:
-        if file_.size <= MIN_SIZE:
-            small_bucket.add(file_)
+    for segment in segments:
+        if segment.size <= MIN_SIZE:
+            small_bucket.add(segment)
         else:
-            file_bucket = None
+            segment_bucket = None
             for bucket in buckets:
-                if bucket.fits(file_):
-                    file_bucket = bucket
+                if bucket.fits(segment):
+                    segment_bucket = bucket
                     break
-            if file_bucket is None:
+            if segment_bucket is None:
                 new_bucket = Bucket()
-                new_bucket.add(file_)
+                new_bucket.add(segment)
                 buckets.append(new_bucket)
             else:
-                file_bucket.add(file_)
+                segment_bucket.add(segment)
             buckets.sort(key=lambda b: b.avg)
     return buckets
 
-
-def merge(in_files: List[File]) -> File:
-    oldest = in_files[0].path.replace(".dat", "")
-    readers = list(filter(lambda r: r.has_next, (Entries(file) for file in in_files)))
-    with kv_writer(f"{oldest}-compacted.dat") as writer:
-        while readers:
-            min_reader = min(
-                readers,
-                key=lambda r: (r.current_pair[0], r.file.index * -1),
-            )
-            for reader in readers:
-                if reader is min_reader:
-                    continue
-                if reader.current_pair[0] == min_reader.current_pair[0]:
-                    reader.advance()
-            if min_reader.current_pair[1] is not TOMBSTONE:
-                writer.write_entry(*min_reader.current_pair)
-            min_reader.advance()
-            readers = [reader for reader in readers if reader.has_next]
-
-    return File(f"{oldest}-compacted.dat", -1, in_files[0].index)
-
-
-def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[File], File]]:
+def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[SSTable], SSTable]]:
     for bucket in buckets:
         if bucket.size() >= MIN_THRESHOLD:
             old_files = bucket.oldest(MIN_THRESHOLD)
-            new_file = merge(old_files)
+            new_file = SSTable.merge(old_files)
             return (old_files, new_file)
     return ([], None)
 
-
-#########
-
-
 def describe_buckets(buckets):
-    n = 1
-    for b in buckets:
-        compaction = "yes" if b.size() >= MIN_THRESHOLD else "no"
+    for i, b in enumerate(buckets):
+        compaction = "(needs compaction)" if b.size() >= MIN_THRESHOLD else ""
         print(
-            f"Tier {n} | min {b.min} avg {b.avg} max {b.max} [needs compact {compaction}]"
+            f"Tier {i + 1} | min {b.min} avg {b.avg} max {b.max} {compaction}"
         )
-        for f in b.files:
+        for f in b.segments:
             print(f" {f.path} {f.size} bytes")
-        n += 1
