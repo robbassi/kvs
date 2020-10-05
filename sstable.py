@@ -65,7 +65,7 @@ class SSTable:
         new_path = sstables[0].path.replace(".dat", "-compacted.dat")
         new_index = sstables[0].index
         new_bf = BloomFilter(BF_SIZE, BF_HASH_COUNT)
-        readers = [SSTable.Entries(sstable) for sstable in sstables
+        readers = [cls.Entries(sstable) for sstable in sstables
                     if sstable.size > 0]
         with kv_writer(new_path) as writer:
             while readers:
