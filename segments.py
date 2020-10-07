@@ -24,7 +24,7 @@ class Segments:
         thread: Thread
         
         def notify(self):
-            self.queue.put(COMPACT_REQUIRED)
+            self.queue.put(COMPACT_REQUIRED, block=False)
 
         def get_task(self):
             return self.queue.get()
