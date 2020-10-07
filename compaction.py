@@ -59,7 +59,7 @@ def compute_buckets(segments: List[SSTable]) -> List[Bucket]:
             buckets.sort(key=lambda b: b.avg)
     return buckets
 
-def compaction_pass(buckets: List[Bucket]) -> Optional[Tuple[List[SSTable], SSTable]]:
+def compaction_pass(buckets: List[Bucket]) -> Tuple[List[SSTable], Optional[SSTable]]:
     for bucket in buckets:
         if bucket.size() >= MIN_THRESHOLD:
             old_files = bucket.oldest(MIN_THRESHOLD)
