@@ -96,4 +96,3 @@ class SSTable:
                 r.skip_value()
         return None
 
-
