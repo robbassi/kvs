@@ -23,9 +23,6 @@ class SSTable:
             else:
                 self.has_next = True
 
-        def __repr__(self) -> str:
-            return f"{self.__class__.__name__}(file={self.file}"
-
         def advance(self) -> None:
             if self.has_next:
                 try:
