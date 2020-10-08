@@ -6,7 +6,7 @@ from os import scandir, stat
 from sstable import SSTable
 
 MIN_THRESHOLD = 4
-MIN_SIZE = 50
+MIN_SIZE = 50000000
 
 
 class Bucket:
