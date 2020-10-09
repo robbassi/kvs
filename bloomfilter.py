@@ -1,7 +1,7 @@
 # Heavily inspired by https://www.kdnuggets.com/2016/08/gentle-introduction-bloom-filter.html
 
-from bitarray import bitarray
-import mmh3
+from bitarray import bitarray #type: ignore
+import mmh3 #type: ignore
 
 
 class BloomFilter:

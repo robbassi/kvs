@@ -12,6 +12,7 @@ class KVS:
         self.rwlock = rwlock.RWLockFairD()
         self.commitlog, self.memtable = CommitLog.resume(log_path)
         self.segments = Segments(segments_path)
+        self.segments.start_compaction_thread()
 
     def get(self, k):
         with self.rwlock.gen_rlock():

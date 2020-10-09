@@ -12,6 +12,7 @@ mypy = "*"
 pytest = "*"
 hypothesis = "*"
 pytest-mock = "*"
+pytest-icdiff = "*"
 
 [packages]
 requests = "*"
