@@ -3,7 +3,7 @@ import tempfile
 from typing import Tuple, List, Union
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from common import TOMBSTONE
@@ -32,18 +32,19 @@ def log() -> List[Tuple[str, str]]:
 
 
 @app.get("/kvs/{key}", responses={404: {"model": Message}})
-async def get_key(key: str) -> Union[str, JSONResponse]:
+def get_key(key: str) -> Union[str, JSONResponse]:
     """Get the value stored at a particular key."""
     value = kvs.get(key)
     if value is None or value is TOMBSTONE:
         return JSONResponse({"message": f"Key `{key}` was not found."}, 404)
-    return value
+    return Response(status_code=200, content=value)
 
 
 @app.put("/kvs", status_code=204)
 def set_key(key: str, value: str) -> None:
     """Set a key-value pair"""
     kvs.set(key, value)
+    return Response(status_code=204)
 
 
 @app.delete("/kvs", status_code=204)
