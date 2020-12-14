@@ -21,6 +21,7 @@ uvicorn = "*"
 bitarray = "*"
 mmh3 = "*"
 readerwriterlock = "*"
+requests-futures = "*"
 
 [requires]
 python_version = "3.9"
