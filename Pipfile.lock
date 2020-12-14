@@ -132,6 +132,13 @@
             "index": "pypi",
             "version": "==2.24.0"
         },
+        "requests-futures": {
+            "hashes": [
+                "sha256:35547502bf1958044716a03a2f47092a89efe8f9789ab0c4c528d9c9c30bc148"
+            ],
+            "index": "pypi",
+            "version": "==1.0.0"
+        },
         "starlette": {
             "hashes": [
                 "sha256:bd2ffe5e37fb75d014728511f8e68ebf2c80b0fa3d04ca1479f4dc752ae31ac9",
