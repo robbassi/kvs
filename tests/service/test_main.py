@@ -48,7 +48,7 @@ def test_get_key_that_never_existed_returns_404_with_message(mocker, kvs):
 
     response = client.get("/kvs/key3")
     assert response.status_code == 404
-    assert "message" in response.json()
+    assert "not found" in response.json()['detail']
 
 
 def test_get_key_that_was_unset_returns_404_with_message(mocker, kvs):
@@ -57,7 +57,7 @@ def test_get_key_that_was_unset_returns_404_with_message(mocker, kvs):
 
     response = client.get("/kvs/key2")
     assert response.status_code == 404
-    assert "message" in response.json()
+    assert "not found" in response.json()['detail']
 
 
 def test_set_key(mocker, kvs):
