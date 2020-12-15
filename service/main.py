@@ -2,7 +2,7 @@ import os
 import tempfile
 from typing import Tuple, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -16,10 +16,6 @@ app = FastAPI()
 kvs = KVS(SEGMENTS_PATH, LOG_PATH)
 
 
-class Message(BaseModel):
-    message: str
-
-
 @app.get("/")
 async def healthcheck():
     return "Success"
@@ -31,13 +27,13 @@ def log() -> List[Tuple[str, str]]:
     return list(kv_iter(LOG_PATH))
 
 
-@app.get("/kvs/{key}", responses={404: {"model": Message}})
-def get_key(key: str) -> JSONResponse:
+@app.get("/kvs/{key}")
+def get_key(key: str) -> str:
     """Get the value stored at a particular key."""
     value = kvs.get(key)
     if value is None or value is TOMBSTONE:
-        return JSONResponse(status_code=404, content={"message": f"Key `{key}` was not found."})
-    return JSONResponse(status_code=200, content=value)
+        raise HTTPException(status_code=404, detail=f"Key `{key}` was not found.")
+    return value
 
 
 @app.put("/kvs", status_code=204)
